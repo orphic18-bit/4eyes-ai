@@ -1,0 +1,32 @@
+# ── Secrets & API keys ──────────────────────
+.env
+*.env
+.env.local
+.env.production
+
+# ── Python ──────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pycache
+
+# ── Virtual environments ─────────────────────
+venv/
+env/
+.venv/
+ENV/
+
+# ── VS Code ──────────────────────────────────
+.vscode/
+
+# ── OS clutter ───────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── 4eyes.ai specific ────────────────────────
+# Prevent real contract text from being committed
+test_contracts/
+sample_contracts/
+*.txt
