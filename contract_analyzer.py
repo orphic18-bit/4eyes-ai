@@ -1,178 +1,251 @@
 """
 4eyes.ai — AI-Powered Business Contract Reviewer
-Phase 1: CLI Script
-Author: Built by Claude for orphic18-bit
-Model: GPT-4o-mini | Temp: 0.1
+Phase 2 · RECEIVER perspective · 2026-05-23
 """
 
 import os
 import sys
+import csv
+
 from openai import OpenAI
 
-# ─────────────────────────────────────────────
-# CONFIGURATION
-# ─────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────
+# Config
+# ────────────────────────────────────────────────────────────
+MODEL              = "gpt-4o"
+TEMPERATURE        = 0.1
+MIN_WORD_COUNT     = 80
+MAX_TOKENS         = 4000
+RED_FLAG_CSV_PATH  = "red_flag_patterns.csv"
 
-MODEL = "gpt-4o-mini"
-TEMPERATURE = 0.1          # Low temp = consistent, predictable output (critical for legal)
-MIN_WORD_COUNT = 80        # Contracts shorter than this are probably not contracts
-MAX_TOKENS = 2500          # Enough for a full structured analysis
+# ────────────────────────────────────────────────────────────
+# 1️⃣  Load red-flag pattern library from CSV
+# ────────────────────────────────────────────────────────────
+def load_red_flag_patterns(path: str) -> list[dict]:
+    """
+    Reads red_flag_patterns.csv and returns a list of dicts.
+    Expected columns: pattern, risk_type, severity,
+                      plain_english_meaning, example_context
+    If the file is not found, prints a warning and returns an
+    empty list — the program continues without the library.
+    """
+    try:
+        with open(path, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            patterns = [row for row in reader]
+        print(f"🔍 Pattern library: {len(patterns)} patterns loaded")
+        return patterns
+    except FileNotFoundError:
+        print(
+            f"⚠️  Warning: '{path}' not found. "
+            "Continuing without the pattern library."
+        )
+        return []
+    except Exception as e:
+        print(f"⚠️  Warning: Could not read '{path}': {e}. "
+              "Continuing without the pattern library.")
+        return []
 
-# ─────────────────────────────────────────────
-# SYSTEM PROMPT — The brain of 4eyes.ai
-# ─────────────────────────────────────────────
 
-SYSTEM_PROMPT = """
-You are 4eyes.ai, a calm and highly experienced business contract analyst.
-Your job is to review business contracts on behalf of solo founders and small SaaS teams
-and return a clear, structured analysis in plain English.
+# ────────────────────────────────────────────────────────────
+# 2️⃣  Build the system prompt
+#     (patterns injected after the reasoning protocol)
+# ────────────────────────────────────────────────────────────
+def build_system_prompt(patterns: list[dict]) -> str:
+    """
+    Assembles the full system prompt.
+    The Supplementary Pattern Library section is generated
+    dynamically from the loaded CSV rows and inserted after
+    the Mandatory Reasoning Protocol.
+    """
+
+    # ── Base prompt (everything before the pattern library) ──
+    base = """\
+You are 4eyes.ai, acting as a strategic advocate for the SIGNING PARTY — \
+the freelancer, contractor, or smaller party receiving this contract. \
+Your sole job is to protect their interests. \
+Favorable = good for the signing party. \
+Unfavorable = bad for the signing party.
+
+Analyze every clause through this lens without exception.
+
+CRITICAL EXAMPLES FOR RECEIVER PERSPECTIVE:
+- IP transferring to Client upon creation = RED FLAG for Receiver (loses work before payment)
+- Unlimited revisions until Client satisfied = RED FLAG for Receiver (infinite unpaid work)
+- Net-60 payment terms = UNFAVORABLE for Receiver (cash flow problem)
+- Acceptance at Client sole discretion = RED FLAG for Receiver (payment can be withheld)
+- A clause giving Receiver ownership until paid = FAVORABLE to Receiver (protects their leverage)
 
 TONE RULES:
-- Be calm, direct, and non-alarmist.
-- Do not sensationalize risks. If a clause is standard and common, say so.
-- Do not give specific legal advice. You are a reviewer, not a lawyer.
-- If a clause is genuinely ambiguous or its interpretation depends on jurisdiction,
-  say so explicitly and recommend consulting a qualified lawyer.
-- Flag genuine red flags clearly, but only when they are actually risky.
+- Be calm, direct, and professional. Never sensational.
+- Do NOT use alarmist all-caps language.
+- If a clause is standard and acceptable, say so plainly.
+- Over-flagging destroys trust.
+- Flag genuine dangers clearly and firmly — but only genuine ones.
+- Do not give specific legal advice.
+- If a clause is genuinely ambiguous, say so and recommend consulting a qualified lawyer.
 
-OUTPUT FORMAT:
-Always respond using EXACTLY this structure, with the section headers as written:
+MANDATORY REASONING PROTOCOL:
+Apply these four steps to EVERY clause before writing the report. \
+Your own reasoning always takes priority over the pattern library.
+
+Step 1 — WHO BENEFITS:
+Does this clause give something to the other party or take something from me?
+If it takes from me — flag it.
+
+Step 2 — HIDDEN MEANING:
+Does the plain reading hide a secondary effect?
+Look especially at:
+- Rights being removed inside definition sections
+- Obligations that survive contract termination
+- Scope that expands beyond what is stated
+- Control given to the other party over decisions \
+that affect my money, my work, or my freedom
+
+Step 3 — DURATION AND SCOPE:
+Does this clause have an end date or is it open-ended? \
+As the signing party, shorter duration and narrower scope is always better.
+Flag anything perpetual, indefinite, or without a hard cap.
+
+Step 4 — PATTERN MATCH:
+Scan the clause against the Supplementary Pattern Library below. \
+If any pattern matches, flag with exact location. \
+If you find something dangerous that is NOT in the library, flag it anyway.
+
+These four steps are not optional. \
+Complete all four for every clause before writing any section of the report."""
+
+    # ── Supplementary Pattern Library section ──
+    if patterns:
+        library_lines = [
+            "",
+            "SUPPLEMENTARY PATTERN LIBRARY:",
+            "The following patterns are known high-risk phrases found in real contracts. "
+            "When you encounter any of these in the contract text, flag them with their "
+            "exact section location.",
+            "",
+            "CRITICAL INSTRUCTION: This list is a supplement to your own reasoning — "
+            "NOT a replacement. You must still apply the full reasoning protocol to every "
+            "clause. If you find a dangerous clause that is NOT in this pattern library, "
+            "flag it anyway. Your judgment takes priority. This library only adds "
+            "sensitivity for known patterns on top of your existing analysis.",
+            "",
+        ]
+        for row in patterns:
+            pattern     = row.get("pattern", "").strip()
+            meaning     = row.get("plain_english_meaning", "").strip()
+            severity    = row.get("severity", "").strip()
+            risk_type   = row.get("risk_type", "").strip()
+            if pattern:
+                library_lines.append(
+                    f'- "{pattern}" → {meaning}\n'
+                    f'  Severity: {severity} | Type: {risk_type}'
+                )
+        library_section = "\n".join(library_lines)
+    else:
+        library_section = (
+            "\n\nSUPPLEMENTARY PATTERN LIBRARY:\n"
+            "No pattern library loaded. Rely entirely on your own reasoning protocol."
+        )
+
+    # ── Output format + disclaimer (unchanged) ──
+    output_format = """
+
+BURIED CLAUSE DETECTION:
+Actively hunt for clauses that secretly remove your rights, expand your liability, \
+transfer your ownership, or create hidden obligations. Surface any such clauses as \
+RED FLAGS with exact section locations.
+
+OUTPUT FORMAT — use **exactly** this structure:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 4eyes.ai — CONTRACT ANALYSIS REPORT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📄 CONTRACT TYPE
-[Identify the type: NDA, SOW, MSA, Freelance Agreement, SaaS Vendor Agreement, etc.]
+[NDA, SOW, MSA, Freelance Agreement, SaaS Vendor Agreement, etc.]
+
+⚖️ CONTRACT TILT
+This contract is [heavily / moderately / slightly] tilted toward [party], **or** balanced.
 
 👥 KEY PARTIES & OBLIGATIONS
-[List the parties involved and summarize what each is obligated to do.]
+[Parties and what each must do.]
 
 ✅ FAVORABLE CLAUSES
-[List clauses that are clearly beneficial or protective for the user. If none, say "None identified."]
+[Clauses beneficial to the signing party.
+If none, say "None identified."]
 
 ⚠️ UNFAVORABLE CLAUSES
-[List clauses that disadvantage the user. For each, briefly explain why. If none, say "None identified."]
+*Definition* — clauses that disadvantage the signing party **but are within normal contract range.**
+Worth negotiating; not deal-breakers.
+**A clause listed here must NOT appear in RED FLAGS.**
+If none, say "None identified."
 
 🚨 RED FLAGS
-[List anything that requires immediate attention — unusual, one-sided, or potentially harmful clauses.
- If none, say "No red flags identified."]
+*Definition* — clauses that are genuinely dangerous, highly unusual, or could cause real financial, legal, or operational damage.
+Higher threshold than Unfavorable Clauses.
+**A clause must NEVER appear in both sections.**
+Include any Named Traps and Buried Clauses (with exact section location).
+If none, say "No red flags identified."
 
 ❓ MISSING CLAUSES
-[List important clauses that are absent but should be present in this type of contract.
- If nothing significant is missing, say so.]
+[Important clauses expected in this contract type but absent.]
 
 💬 NEGOTIATION SUGGESTIONS
-[Specific, actionable things the user could push back on or request changes to.]
+[Specific, actionable push-back items.]
 
 🏁 OVERALL VERDICT
-[One of three options: SIGN / NEGOTIATE / AVOID]
-[Follow with 2–3 sentences explaining the verdict plainly.]
+[SIGN / NEGOTIATE / AVOID — plus 2-3 plain sentences explaining from the signing party's perspective.]
 
 ─────────────────────────────────────────
 ⚖️  DISCLAIMER
 This analysis is generated by an AI tool and is for informational purposes only.
-It does not constitute legal advice. For any contract with significant financial,
-legal, or business implications, please consult a qualified attorney.
-─────────────────────────────────────────
-"""
+It does not constitute legal advice. For any contract with significant financial, legal, or business implications, please consult a qualified attorney.
+─────────────────────────────────────────"""
 
-# ─────────────────────────────────────────────
-# INPUT VALIDATOR
-# ─────────────────────────────────────────────
+    return base + library_section + output_format
 
-def looks_like_a_contract(text: str) -> tuple[bool, str]:
-    """
-    Basic heuristic check before sending to the API.
-    Saves API cost and avoids hallucinated analysis on garbage input.
-    Returns (is_valid: bool, reason: str)
-    """
+
+# ────────────────────────────────────────────────────────────
+# 3️⃣  Heuristic: looks_like_a_contract
+# ────────────────────────────────────────────────────────────
+def looks_like_a_contract(text: str):
     word_count = len(text.split())
-
     if word_count < MIN_WORD_COUNT:
         return False, (
             f"Input is too short ({word_count} words). "
-            f"A contract typically has at least {MIN_WORD_COUNT} words. "
-            "Please paste the full contract text."
+            f"A contract typically has at least {MIN_WORD_COUNT} words."
         )
 
-    # Look for at least a few contract-like signals
-    contract_signals = [
-        "agree", "agreement", "party", "parties", "shall", "obligations",
-        "terms", "conditions", "signed", "signature", "effective date",
-        "clause", "section", "whereas", "herein", "payment", "terminate",
-        "confidential", "liability", "indemnif", "warranty", "govern"
+    signals = [
+        "agreement", "party", "shall", "obligations", "terms",
+        "conditions", "signature", "effective date", "clause",
+        "section", "payment", "terminate", "confidential",
+        "liability", "indemnif", "warranty", "govern"
     ]
-
-    text_lower = text.lower()
-    matched = sum(1 for signal in contract_signals if signal in text_lower)
-
+    matched = sum(1 for s in signals if s in text.lower())
     if matched < 3:
         return False, (
             "This doesn't appear to be a business contract. "
-            "4eyes.ai is designed to review contracts like NDAs, SOWs, MSAs, "
-            "freelance agreements, or SaaS vendor agreements. "
-            "Please paste the actual contract text."
+            "Please paste an NDA, SOW, MSA, freelance agreement, "
+            "or SaaS vendor agreement."
         )
-
     return True, "ok"
 
 
-# ─────────────────────────────────────────────
-# CORE ANALYSIS FUNCTION
-# ─────────────────────────────────────────────
-
-def analyze_contract(contract_text: str) -> str:
-    """
-    Sends the contract to OpenAI and returns the structured analysis.
-    """
-    # Pull API key from environment variable (never hardcode keys)
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        print("\n❌  ERROR: OPENAI_API_KEY environment variable not found.")
-        print("    Set it with:  set OPENAI_API_KEY=your-key-here  (Windows CMD)")
-        print("    Or in PowerShell: $env:OPENAI_API_KEY='your-key-here'")
-        sys.exit(1)
-
-    client = OpenAI(api_key=api_key)
-
-    print("\n⏳  Analyzing contract... this usually takes 10–20 seconds.\n")
-
-    try:
-        response = client.chat.completions.create(
-            model=MODEL,
-            temperature=TEMPERATURE,
-            max_tokens=MAX_TOKENS,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user",   "content": f"Please review this contract:\n\n{contract_text}"}
-            ]
-        )
-        return response.choices[0].message.content
-
-    except Exception as e:
-        return f"\n❌  API Error: {str(e)}\n\nCheck your API key and internet connection."
-
-
-# ─────────────────────────────────────────────
-# INPUT COLLECTION
-# ─────────────────────────────────────────────
-
+# ────────────────────────────────────────────────────────────
+# 4️⃣  CLI helper
+# ────────────────────────────────────────────────────────────
 def collect_contract_input() -> str:
-    """
-    Prompts the user to paste their contract text.
-    They type END on its own line to finish.
-    """
     print("━" * 48)
     print("  4eyes.ai — Business Contract Reviewer")
-    print("  Phase 1 | Powered by GPT-4o-mini")
+    print("  Phase 2 | Powered by GPT-4o-mini")
     print("━" * 48)
     print()
     print("Paste your contract text below.")
-    print("When you're done, type  END  on a new line and press Enter.")
+    print("When done, type  END  on a new line and press Enter.")
     print()
     print("─" * 48)
-
     lines = []
     while True:
         try:
@@ -181,35 +254,59 @@ def collect_contract_input() -> str:
                 break
             lines.append(line)
         except EOFError:
-            # Handles piped input (e.g. python contract_analyzer.py < contract.txt)
             break
-
     return "\n".join(lines).strip()
 
 
-# ─────────────────────────────────────────────
-# MAIN
-# ─────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────
+# 5️⃣  Core analysis function
+# ────────────────────────────────────────────────────────────
+def analyze_contract(contract_text: str, system_prompt: str) -> str:
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        print("\n❌  ERROR: OPENAI_API_KEY not found.")
+        sys.exit(1)
 
+    client = OpenAI(api_key=api_key)
+
+    print("\n⏳  Analysing... this usually takes 10–20 seconds.\n")
+    try:
+        response = client.chat.completions.create(
+            model=MODEL,
+            temperature=TEMPERATURE,
+            max_tokens=MAX_TOKENS,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user",   "content": contract_text}
+            ]
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"\n❌  API Error: {e}"
+
+
+# ────────────────────────────────────────────────────────────
+# 6️⃣  Entry-point
+# ────────────────────────────────────────────────────────────
 def main():
-    contract_text = collect_contract_input()
+    # Load pattern library first (before the banner clears the screen)
+    patterns      = load_red_flag_patterns(RED_FLAG_CSV_PATH)
+    system_prompt = build_system_prompt(patterns)
 
+    contract_text = collect_contract_input()
     if not contract_text:
-        print("\n⚠️  No input received. Please paste contract text when prompted.\n")
+        print("\n⚠️  No input received.\n")
         sys.exit(0)
 
-    # Validate before hitting the API
-    is_valid, reason = looks_like_a_contract(contract_text)
-    if not is_valid:
+    ok, reason = looks_like_a_contract(contract_text)
+    if not ok:
         print(f"\n⚠️  {reason}\n")
         sys.exit(0)
 
-    # Run analysis
-    result = analyze_contract(contract_text)
-
-    # Print result
-    print("\n" + result + "\n")
+    analysis = analyze_contract(contract_text, system_prompt)
+    print("\n" + analysis + "\n")
 
 
+# ────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     main()
