@@ -1,0 +1,144 @@
+pattern,risk_type,severity,plain_english_meaning,example_context
+sole discretion,CONTROL,RED_FLAG,The other party can act unilaterally without your approval.,"Vendor may, in its sole discretion, suspend the Services at any time."
+at its discretion,CONTROL,UNFAVORABLE,The other party can decide outcomes without your consent.,Provider may modify the deliverables at its discretion.
+may change without notice,CONTROL,UNFAVORABLE,Terms can be altered without informing you first.,Terms may change without notice to Client.
+may modify,CONTROL,UNFAVORABLE,The other party can alter obligations unilaterally.,Company may modify this Agreement from time to time.
+reasonable discretion,CONTROL,WATCH,The scope of 'reasonable' is vague and could be stretched.,Fees may be adjusted at Provider’s reasonable discretion.
+sole judgment,CONTROL,RED_FLAG,Only the other party decides what constitutes breach or compliance.,Breach shall be determined in Company’s sole judgment.
+without prior approval,CONTROL,UNFAVORABLE,Actions can be taken affecting you without asking you first.,Subcontractors may be engaged without prior approval.
+as determined by Company,CONTROL,UNFAVORABLE,Company alone defines key outcomes or metrics.,Acceptance shall be as determined by Company.
+subject to company policies,CONTROL,WATCH,Undefined external policies can override the contract.,Use of Services is subject to Company policies.
+may suspend,CONTROL,UNFAVORABLE,"Service can be paused unilaterally, affecting your operations.",Provider may suspend access for any reason.
+"assigns all right, title, and interest",OWNERSHIP,RED_FLAG,You give up all ownership of deliverables forever.,"Contractor assigns all right, title, and interest in the Work Product."
+work made for hire,OWNERSHIP,RED_FLAG,Everything you create belongs to the other party by default.,All Deliverables shall be considered a work made for hire.
+exclusive license,OWNERSHIP,RED_FLAG,You cannot use the IP elsewhere because rights are exclusive.,Client grants Vendor an exclusive license to the Software.
+irrevocable license,OWNERSHIP,RED_FLAG,You cannot revoke the other party’s usage rights.,Licensor grants an irrevocable license to use the Marks.
+perpetual license,OWNERSHIP,RED_FLAG,Rights last forever with no end date.,Licensee receives a perpetual license to the Deliverables.
+worldwide license,OWNERSHIP,UNFAVORABLE,"Rights extend to all jurisdictions, limiting your regional control.",Supplier is granted a worldwide license to reproduce content.
+royalty-free license,OWNERSHIP,UNFAVORABLE,The other party pays no ongoing fees despite using your IP.,Client grants a royalty‑free license to all materials provided.
+transfer of ownership,OWNERSHIP,RED_FLAG,Legal ownership moves permanently to the other party.,"Upon payment, transfer of ownership of source code shall occur."
+all derivatives,OWNERSHIP,UNFAVORABLE,Future versions and spin‑offs also belong to the other party.,"Rights include all derivatives, adaptations, or enhancements."
+moral rights waiver,OWNERSHIP,RED_FLAG,You waive personal rights to attribution or integrity of your work.,Contractor waives all moral rights in the Deliverables.
+limitation of liability,LIABILITY,WATCH,Caps the damages you can claim if things go wrong.,In no event shall liability exceed the amount paid.
+cap on damages,LIABILITY,WATCH,Sets a maximum amount you can recover.,Damages are capped at total fees paid during the prior 12 months.
+consequential damages,LIABILITY,RED_FLAG,You cannot claim indirect losses like lost profits.,Neither party shall be liable for consequential damages.
+indirect damages,LIABILITY,RED_FLAG,Excludes many real‑world losses from recovery.,Vendor disclaims all indirect damages.
+punitive damages,LIABILITY,UNFAVORABLE,"Punitive damages are excluded, limiting recovery options.",Customer waives punitive damages.
+strict liability,LIABILITY,RED_FLAG,You may be liable regardless of fault.,Provider shall be subject to strict liability for any defect.
+gross negligence,LIABILITY,WATCH,Clause may not apply to gross negligence; ensure carve‑outs exist.,Limitation shall not apply to gross negligence.
+aggregate liability,LIABILITY,UNFAVORABLE,Combines multiple claims into one low ceiling.,"Aggregate liability shall not exceed ₹10,000."
+sole remedy,LIABILITY,UNFAVORABLE,Limits you to one narrow remedy if things go wrong.,Refund of fees shall be Customer’s sole remedy.
+late fee,PAYMENT,UNFAVORABLE,Extra cost for late payments.,Late fee of 1.5% per month applies to overdue amounts.
+interest rate of,PAYMENT,UNFAVORABLE,Interest accrues on unpaid sums.,Interest rate of 18% per annum will accrue on late invoices.
+non-refundable,PAYMENT,RED_FLAG,Money paid will not be returned under any circumstances.,Setup fees are non‑refundable.
+auto‑debit,PAYMENT,WATCH,Funds can be pulled automatically from your account.,Charges will be auto‑debited each billing cycle.
+true‑up,PAYMENT,UNFAVORABLE,Later adjustment could increase costs unpredictably.,Provider may perform a true‑up audit and invoice additional fees.
+payment upon receipt,PAYMENT,WATCH,"You must pay immediately, impacting cash flow.",Payment is due upon receipt of invoice.
+net 15,PAYMENT,WATCH,Short payment window may strain cash flow.,Client shall pay all invoices net 15.
+net 60,PAYMENT,UNFAVORABLE,Long delay before you get paid (if you’re vendor).,Company shall pay supplier net 60 days.
+cost-plus,PAYMENT,RED_FLAG,You reimburse costs plus a margin without cost control.,Fees shall be calculated on a cost‑plus 10% basis.
+overage charges,PAYMENT,UNFAVORABLE,Extra fees apply if usage exceeds limits.,Overage charges apply to usage above quota.
+auto-renew,LOCK-IN,RED_FLAG,Agreement will self‑extend unless you act.,Subscription auto‑renews each year.
+evergreen term,LOCK-IN,RED_FLAG,No natural end date; rolls over perpetually.,This Agreement shall have an evergreen term.
+non‑cancellable,LOCK-IN,RED_FLAG,You cannot exit early even if unhappy.,Services are non‑cancellable during the Term.
+minimum commitment,LOCK-IN,UNFAVORABLE,You must buy/pay a minimum amount regardless of use.,"Customer agrees to a minimum commitment of 1,000 seats."
+volume commitment,LOCK-IN,UNFAVORABLE,You must purchase a set volume each period.,Client agrees to a quarterly volume commitment.
+early termination fee,LOCK-IN,RED_FLAG,Extra cost if you exit early.,Early termination fee equal to 50% of remaining fees applies.
+buyout fee,LOCK-IN,RED_FLAG,Large payment required to exit obligations.,Customer may terminate upon payment of a buyout fee.
+price escalation,LOCK-IN,WATCH,Prices can rise over time per formula.,Pricing is subject to annual price escalation of 5%.
+take-or-pay,LOCK-IN,RED_FLAG,You pay even if you don’t use the service.,Take‑or‑pay minimums apply each month.
+exclusive supplier,LOCK-IN,RED_FLAG,You cannot source from competitors.,Client shall use Vendor as exclusive supplier.
+including without limitation,SCOPE,RED_FLAG,Open‑ended scope can expand obligations.,"Confidential Information includes, without limitation, all data."
+for any purpose,SCOPE,RED_FLAG,Other party can use your data broadly.,Data may be used for any purpose.
+all intellectual property,SCOPE,RED_FLAG,Covers everything rather than specific items.,This license covers all intellectual property provided.
+regardless of cause,SCOPE,UNFAVORABLE,Liability applies even when not at fault.,Obligation applies regardless of cause.
+any and all claims,SCOPE,RED_FLAG,"Covers every possible claim, broadening exposure.",Indemnity covers any and all claims.
+worldwide,SCOPE,UNFAVORABLE,"Applies globally, expanding reach.",Licensee may exploit the software worldwide.
+right to audit,SCOPE,WATCH,Other party can inspect your records.,Vendor retains the right to audit client’s usage.
+inspection at any time,SCOPE,UNFAVORABLE,Can disrupt operations.,Premises subject to inspection at any time.
+all deliverables,SCOPE,WATCH,Scope may unintentionally cover too much.,Client owns all deliverables and related materials.
+use for marketing purposes,SCOPE,UNFAVORABLE,Other party can publicly reference you.,Provider may use Client logo for marketing purposes.
+in perpetuity,DURATION,RED_FLAG,Obligation lasts forever.,License granted is in perpetuity.
+perpetual,DURATION,RED_FLAG,No end date to obligations.,The confidentiality obligations are perpetual.
+indefinite,DURATION,RED_FLAG,Unclear end point.,Term is indefinite.
+until terminated,DURATION,UNFAVORABLE,No committed end date; relies on termination clause.,Agreement effective until terminated.
+for the life of,DURATION,RED_FLAG,"Tied to life of product/service, extremely long.",Royalty due for the life of the patent.
+continuing obligations,DURATION,UNFAVORABLE,Certain duties survive forever.,Continuing obligations survive expiration.
+survive termination,DURATION,WATCH,Clauses stay alive after contract ends.,Sections 3–7 survive termination.
+no set term,DURATION,RED_FLAG,Open‑ended duration creates uncertainty.,This Agreement has no set term.
+effective until notice,DURATION,UNFAVORABLE,Other party controls duration by giving notice.,Policy remains effective until notice of change.
+ongoing,DURATION,WATCH,Vague timeline may drag on.,Services are provided on an ongoing basis.
+exclusive jurisdiction of,JURISDICTION,UNFAVORABLE,You must litigate in a potentially inconvenient forum.,Parties submit to the exclusive jurisdiction of Singapore courts.
+governing law of Delaware,JURISDICTION,UNFAVORABLE,Favors the other party’s home turf.,This Agreement shall be governed by the laws of Delaware.
+forum non conveniens,JURISDICTION,WATCH,You waive objections to inconvenient forum.,Parties waive forum non conveniens objections.
+venue shall be,JURISDICTION,UNFAVORABLE,Fixed court location may burden you.,Venue shall be San Francisco County.
+arbitration in,JURISDICTION,UNFAVORABLE,Arbitration location may be costly.,Disputes resolved by arbitration in London.
+choice of law,JURISDICTION,WATCH,Generic clause may default against you.,Choice of law is California without regard to conflicts.
+waives objection to jurisdiction,JURISDICTION,RED_FLAG,You give up the right to contest forum.,Party hereby waives objection to jurisdiction.
+service of process,JURISDICTION,WATCH,Specifies less favorable methods.,Service of process by mail is deemed sufficient.
+conflict of laws,JURISDICTION,WATCH,Could import foreign laws unexpectedly.,Apply without regard to conflict of laws principles.
+arbitration administered by,JURISDICTION,WATCH,Admin body may bias process or increase cost.,Arbitration shall be administered by the ICC.
+termination for convenience,TERMINATION,RED_FLAG,"Other party can end deal anytime, leaving you stranded.",Company may terminate this Agreement for convenience with 10 days’ notice.
+immediately upon written notice,TERMINATION,UNFAVORABLE,Very short notice period gives little time to respond.,Agreement terminates immediately upon written notice of breach.
+without cause,TERMINATION,RED_FLAG,Can end without your fault.,Either party may terminate without cause.
+breach as determined by,TERMINATION,UNFAVORABLE,Other party decides what constitutes breach.,Breach as determined by Provider will trigger termination.
+upon insolvency,TERMINATION,WATCH,Triggers termination even during restructuring.,Agreement terminates upon insolvency of either party.
+automatic termination,TERMINATION,UNFAVORABLE,Ends automatically under vague conditions.,Failure to pay results in automatic termination.
+accelerated obligations,TERMINATION,RED_FLAG,All fees become due immediately at termination.,All outstanding fees accelerate upon termination.
+wind‑down period,TERMINATION,WATCH,May impose obligations after end date.,Client will assist during a 90‑day wind‑down period.
+liquidated damages upon termination,TERMINATION,RED_FLAG,Pre‑set high penalty if contract ends.,Liquidated damages equal to six months’ fees apply.
+termination charge,TERMINATION,RED_FLAG,Fee payable on termination for convenience.,"Termination charge of $5,000 applies."
+"defend, indemnify and hold harmless",INDEMNIFICATION,RED_FLAG,You must cover losses and defense costs.,"You shall defend, indemnify and hold harmless the Company."
+indemnify against all claims,INDEMNIFICATION,RED_FLAG,Very broad indemnity scope.,Client will indemnify Vendor against all claims and damages.
+third‑party claims,INDEMNIFICATION,WATCH,Scope depends on definition of claims.,Indemnity applies to all third‑party claims.
+attorneys' fees,INDEMNIFICATION,UNFAVORABLE,You pay the other side’s legal costs.,Indemnity includes reasonable attorneys' fees.
+out-of-pocket costs,INDEMNIFICATION,UNFAVORABLE,Covers additional expenses.,Indemnified costs include all out‑of‑pocket expenses.
+infringement indemnity,INDEMNIFICATION,WATCH,You cover IP infringement suits.,Vendor shall provide infringement indemnity.
+breach of confidentiality indemnity,INDEMNIFICATION,WATCH,You cover any leak losses.,Client agrees to indemnify for breach of confidentiality.
+strict duty to defend,INDEMNIFICATION,RED_FLAG,You must control and pay for defense entirely.,You have a strict duty to defend any claim.
+on demand indemnity,INDEMNIFICATION,RED_FLAG,You must pay immediately even before verdict.,Indemnity obligations are on demand.
+unlimited indemnification,INDEMNIFICATION,RED_FLAG,No cap on exposure.,Indemnity obligations are unlimited.
+waive any and all,WAIVER,RED_FLAG,You surrender broad rights.,Party waives any and all rights to contest.
+no liability,WAIVER,RED_FLAG,Other party avoids responsibility.,Provider shall have no liability of any kind.
+no reliance,WAIVER,RED_FLAG,You cannot rely on statements not in contract.,Client acknowledges it has placed no reliance on representations.
+as is,WAIVER,UNFAVORABLE,Goods/services provided without warranty.,"Software provided “as is,” without warranty."
+non‑reliance,WAIVER,WATCH,"Combined with no reliance, narrows claims.",Parties acknowledge non‑reliance on outside statements.
+waiver of jury trial,WAIVER,WATCH,You give up right to jury.,Parties waive the right to a jury trial.
+no waiver,WAIVER,WATCH,Failure to enforce clause isn't a waiver; can delay enforcement.,No waiver shall be deemed to have occurred.
+cumulative remedies,WAIVER,WATCH,Other party keeps all remedies; you may not.,Rights are cumulative and not exclusive.
+delay shall not constitute waiver,WAIVER,WATCH,Enforcement delay doesn’t waive rights.,Delay in enforcement shall not constitute waiver.
+waives right to injunctive relief,WAIVER,RED_FLAG,You give up ability to get injunction.,Customer waives right to injunctive relief.
+assign without consent,OTHER,RED_FLAG,Other party can transfer contract freely.,Vendor may assign this Agreement without consent.
+successors and assigns,OTHER,WATCH,Contract binds parties you didn’t bargain with.,Agreement binds successors and assigns.
+may assign freely,OTHER,UNFAVORABLE,Other party can transfer to unknown third party.,Provider may assign freely.
+no oral modification,OTHER,WATCH,Changes must be written; can prevent quick fixes.,No oral modification shall be effective.
+may amend at any time,OTHER,RED_FLAG,Terms can change unilaterally.,Company may amend this Agreement at any time upon notice.
+deemed accepted,OTHER,RED_FLAG,Silence equals consent to changes.,Changes shall be deemed accepted unless objected within 5 days.
+change upon notice,OTHER,UNFAVORABLE,Terms vary with notice only.,Fees subject to change upon notice.
+most favored nation,OTHER,UNFAVORABLE,"You must match future better pricing to others, squeezing margins.",Client shall offer Supplier most favored nation pricing.
+entire agreement,OTHER,WATCH,Supersedes prior promises; okay but watch hidden docs.,This Agreement constitutes the entire agreement between parties.
+severability,OTHER,WATCH,Clause survival if part invalid; usually neutral but watch split burden.,"If any provision is invalid, the remainder shall remain in force."
+non-compete,OTHER,RED_FLAG,Restricts your ability to work in your field.,Employee agrees to a 2‑year non‑compete within India.
+non-solicitation,OTHER,UNFAVORABLE,Limits recruiting or contacting certain parties.,Client will not solicit Provider’s employees for 12 months.
+liquidated damages,LIABILITY,RED_FLAG,Preset penalty that may exceed actual loss.,"Liquidated damages of $50,000 shall apply for breach."
+security interest,OTHER,RED_FLAG,Gives the other party a lien on your assets.,Client grants Vendor a security interest in equipment.
+lien,OTHER,RED_FLAG,Right to seize property until payment.,Vendor may place a lien on deliverables until paid.
+prevailing party,OTHER,UNFAVORABLE,Loser pays winner's legal fees.,Prevailing party is entitled to recover attorneys' fees.
+injunctive relief,OTHER,WATCH,"Allows immediate court order, may bypass normal dispute steps.",Either party may seek injunctive relief without posting bond.
+right to offset,OTHER,UNFAVORABLE,Other party can withhold your payments to settle unrelated disputes.,Company may offset amounts owed against future invoices.
+set-off,OTHER,UNFAVORABLE,"Same as offset, risk to cash flow.",Provider may exercise right of set‑off.
+material adverse change,OTHER,WATCH,Allows renegotiation if situation changes; vague.,Parties may renegotiate upon a material adverse change.
+best efforts,OTHER,WATCH,Obligation vague and potentially weak.,Partner will use best efforts to meet delivery dates.
+commercially reasonable efforts,OTHER,WATCH,Standard may let other party off the hook.,Vendor will use commercially reasonable efforts to correct defects.
+time is of the essence,OTHER,WATCH,Strict timing; breach if delays occur.,Time is of the essence for all deliveries.
+no reverse engineering,OTHER,WATCH,Prohibits analysis that may be necessary.,Client shall not reverse engineer the Software.
+books and records,SCOPE,WATCH,Other party can inspect your financials.,Client shall keep books and records open for inspection.
+escrow,PAYMENT,WATCH,"Funds held until conditions met, may delay payment.",Payment will be held in escrow until milestones are met.
+escalation clause,LOCK-IN,WATCH,Allows costs to rise automatically.,Rates subject to escalation clause tied to CPI.
+survival,DURATION,WATCH,"Section continues after termination, may include burdens.",Confidentiality obligations shall survive any termination.
+statutory interest,PAYMENT,UNFAVORABLE,High legally mandated interest on late sums.,Statutory interest shall accrue on overdue invoices.
+most favored customer,OTHER,UNFAVORABLE,Must give them your best pricing terms now and in future.,Vendor shall grant Client most favored customer pricing.
+non‑disparagement,OTHER,RED_FLAG,You cannot publicly criticise them.,Employee agrees to non‑disparagement of Company.
+force majeure,OTHER,WATCH,Excuses performance potentially overbroadly.,Neither party shall be liable for delays due to force majeure.
+revocable at will,CONTROL,RED_FLAG,Other party can withdraw your rights anytime.,License is revocable at will by Provider.
+sole and exclusive remedy,LIABILITY,UNFAVORABLE,Limits your recovery options to one narrow fix.,Repair or replacement is the sole and exclusive remedy.
