@@ -459,7 +459,79 @@ def validate_report(report: str, alerts: list[dict]) -> list[str]:
 
 
 # ────────────────────────────────────────────────────────────
-# 9  Input validator
+# 9  Programmatic entry-point (called by app.py / Streamlit)
+# ────────────────────────────────────────────────────────────
+def analyze(contract_text: str) -> str:
+    """
+    Run the full 4eyes pipeline on pre-supplied text and return
+    the report as a string.  Raises ValueError for bad input and
+    RuntimeError for configuration/API problems.
+
+    Intentionally does NOT call sys.exit() — exceptions propagate
+    to the caller so the Streamlit UI can surface them cleanly.
+    """
+    # ── Validate input ───────────────────────────────────────
+    ok, reason = looks_like_a_contract(contract_text)
+    if not ok:
+        raise ValueError(reason)
+
+    # ── Load resources ───────────────────────────────────────
+    patterns      = load_red_flag_patterns(RED_FLAG_CSV_PATH)
+    base_prompt   = load_system_prompt_safe(SYSTEM_PROMPT_PATH)
+    system_prompt = build_system_prompt(base_prompt, patterns)
+
+    # ── API client ───────────────────────────────────────────
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError(
+            "OPENAI_API_KEY environment variable is not set. "
+            "Add it to your .env file or Streamlit secrets."
+        )
+    client = OpenAI(api_key=api_key)
+
+    # ── Pipeline ─────────────────────────────────────────────
+    alerts     = run_trap_linter(contract_text)
+    extraction = run_extraction_pass(contract_text, client)
+    linter_text = format_linter_alerts(alerts)
+    report = run_analysis_pass(
+        contract_text,
+        extraction,
+        linter_text,
+        system_prompt,
+        client,
+    )
+
+    # ── Validate & append any warnings ───────────────────────
+    failures = validate_report(report, alerts)
+    if failures:
+        warning_block = (
+            "\n\n---\n⚠️ **VALIDATION WARNINGS** — review carefully:\n"
+            + "\n".join(f"• {f}" for f in failures)
+        )
+        report += warning_block
+
+    return report
+
+
+def load_system_prompt_safe(path: str) -> str:
+    """
+    Non-exiting variant of load_system_prompt used by analyze().
+    Raises RuntimeError instead of calling sys.exit() so callers
+    can handle the failure gracefully.
+    """
+    try:
+        with open(path, encoding="utf-8") as f:
+            content = f.read()
+        return content
+    except FileNotFoundError:
+        raise RuntimeError(
+            f"System prompt file '{path}' not found. "
+            "Ensure it lives in the same directory as contract_analyzer.py."
+        )
+
+
+# ────────────────────────────────────────────────────────────
+# 10  Input validator
 # ────────────────────────────────────────────────────────────
 def looks_like_a_contract(text: str):
     word_count = len(text.split())
@@ -485,7 +557,7 @@ def looks_like_a_contract(text: str):
 
 
 # ────────────────────────────────────────────────────────────
-# 10  CLI input
+# 11  CLI input
 # ────────────────────────────────────────────────────────────
 def collect_contract_input() -> str:
     print("━" * 48)
