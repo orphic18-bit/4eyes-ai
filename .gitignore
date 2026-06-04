@@ -29,4 +29,4 @@ desktop.ini
 # Prevent real contract text from being committed
 test_contracts/
 sample_contracts/
-*.txt
+system_prompt.txt
