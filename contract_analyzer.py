@@ -515,18 +515,45 @@ def analyze(contract_text: str) -> str:
 
 def load_system_prompt_safe(path: str) -> str:
     """
-    Non-exiting variant of load_system_prompt used by analyze().
-    Raises RuntimeError instead of calling sys.exit() so callers
-    can handle the failure gracefully.
+    Loads the system prompt with a two-step fallback strategy:
+
+    1. Streamlit secrets  — st.secrets["SYSTEM_PROMPT"]
+       Used when deployed on Streamlit Cloud (secret set in the dashboard).
+
+    2. Local file at `path`
+       Used when running locally via `streamlit run app.py` with a
+       system_prompt.txt file present alongside contract_analyzer.py.
+
+    Raises RuntimeError (never calls sys.exit) so the Streamlit UI
+    can surface the error cleanly.  The CLI main() is unaffected —
+    it calls load_system_prompt() directly, which is unchanged.
     """
+    # ── 1. Try Streamlit secrets ─────────────────────────────
+    # streamlit is imported inside the function so this module stays
+    # importable as a plain Python script (CLI) without any Streamlit
+    # context.  All exceptions are caught: KeyError (key absent),
+    # FileNotFoundError (no secrets.toml locally), or any
+    # StreamlitAPIException when not running under Streamlit.
+    try:
+        import streamlit as st
+        prompt = st.secrets["SYSTEM_PROMPT"]
+        if prompt:
+            print("📋 System prompt: loaded from Streamlit secrets")
+            return prompt
+    except Exception:
+        pass  # Not in Streamlit Cloud or key not set — fall through
+
+    # ── 2. Fall back to local file ───────────────────────────
     try:
         with open(path, encoding="utf-8") as f:
             content = f.read()
+        print(f"📋 System prompt: loaded from {path}")
         return content
     except FileNotFoundError:
         raise RuntimeError(
-            f"System prompt file '{path}' not found. "
-            "Ensure it lives in the same directory as contract_analyzer.py."
+            f"System prompt not found.\n"
+            f"  • In Streamlit Cloud: add SYSTEM_PROMPT to your app secrets.\n"
+            f"  • Locally: ensure '{path}' is in the same folder as contract_analyzer.py."
         )
 
 
