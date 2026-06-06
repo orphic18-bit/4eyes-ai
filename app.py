@@ -8,6 +8,7 @@ import tempfile
 import os
 import sys
 import io
+import html
 from pathlib import Path
 
 # ── Page config (must be first Streamlit call) ────────────────────────────────
@@ -291,36 +292,84 @@ st.markdown('<hr class="hairline">', unsafe_allow_html=True)
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:
-    """Extract text from a PDF using pdfplumber (preferred) or PyPDF2 fallback."""
+    """Extract text from a PDF using pdfplumber."""
     try:
-        import pdfplumber, io
+        import pdfplumber
+    except ImportError as err:
+        raise RuntimeError(
+            "pdfplumber is not installed. Run: pip install pdfplumber"
+        ) from err
+
+    try:
         with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
             pages = [page.extract_text() or "" for page in pdf.pages]
-        return "\n\n".join(pages)
-    except ImportError:
-        pass
-    try:
-        import PyPDF2, io
-        reader = PyPDF2.PdfReader(io.BytesIO(file_bytes))
-        return "\n\n".join(
-            page.extract_text() or "" for page in reader.pages
-        )
-    except Exception as e:
-        raise RuntimeError(f"PDF extraction failed: {e}")
+        return "\n\n".join(pages).strip()
+    except Exception as err:
+        raise RuntimeError(
+            f"PDF text extraction failed. Please paste the contract text manually instead. Details: {err}"
+        ) from err
 
 
 def extract_text_from_docx(file_bytes: bytes) -> str:
     """Extract text from a DOCX using python-docx."""
     try:
-        import docx, io
-        doc = docx.Document(io.BytesIO(file_bytes))
-        return "\n\n".join(p.text for p in doc.paragraphs if p.text.strip())
-    except ImportError:
+        import docx
+    except ImportError as err:
         raise RuntimeError(
-            "python-docx not installed. Run: pip install python-docx"
-        )
-    except Exception as e:
-        raise RuntimeError(f"DOCX extraction failed: {e}")
+            "python-docx is not installed. Run: pip install python-docx"
+        ) from err
+
+    try:
+        doc = docx.Document(io.BytesIO(file_bytes))
+        parts: list[str] = []
+
+        for paragraph in doc.paragraphs:
+            text = paragraph.text.strip()
+            if text:
+                parts.append(text)
+
+        # Some contracts put commercial terms or signature blocks inside tables.
+        for table in doc.tables:
+            for row in table.rows:
+                cells = [cell.text.strip() for cell in row.cells if cell.text.strip()]
+                if cells:
+                    parts.append(" | ".join(cells))
+
+        return "\n\n".join(parts).strip()
+    except Exception as err:
+        raise RuntimeError(
+            f"DOCX text extraction failed. Please paste the contract text manually instead. Details: {err}"
+        ) from err
+
+
+def extract_text_from_txt(file_bytes: bytes) -> str:
+    """Extract text from a plain TXT file."""
+    for encoding in ("utf-8", "utf-8-sig", "cp1252", "latin-1"):
+        try:
+            return file_bytes.decode(encoding).strip()
+        except UnicodeDecodeError:
+            continue
+
+    raise RuntimeError(
+        "TXT text extraction failed. Please paste the contract text manually instead."
+    )
+
+
+def extract_text_from_uploaded_file(uploaded_file) -> str:
+    """Route an uploaded file to the correct text extractor."""
+    file_bytes = uploaded_file.getvalue()
+    ext = Path(uploaded_file.name).suffix.lower()
+
+    if ext == ".pdf":
+        return extract_text_from_pdf(file_bytes)
+    if ext == ".docx":
+        return extract_text_from_docx(file_bytes)
+    if ext == ".txt":
+        return extract_text_from_txt(file_bytes)
+
+    raise RuntimeError(
+        "Unsupported file type. Please upload a PDF, DOCX, or TXT file, or paste the contract text manually."
+    )
 
 
 def run_analysis(contract_text: str) -> str:
@@ -378,64 +427,61 @@ def run_analysis(contract_text: str) -> str:
 
 
 # ── Input section ─────────────────────────────────────────────────────────────
-st.markdown('<div class="section-label">Input Method</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-label">UPLOAD CONTRACT (PDF, DOCX, or TXT)</div>', unsafe_allow_html=True)
 
-input_mode = st.radio(
-    label="input_mode",
-    options=["Upload file", "Paste text"],
+uploaded = st.file_uploader(
+    label="UPLOAD CONTRACT (PDF, DOCX, or TXT)",
+    type=["pdf", "docx", "txt"],
     label_visibility="collapsed",
-    horizontal=True,
+    help="PDF, DOCX, or TXT, up to 50 MB",
+)
+
+st.markdown('<div class="section-label" style="margin-top:1.2rem;">Contract Text</div>', unsafe_allow_html=True)
+pasted = st.text_area(
+    label="contract_text_input",
+    label_visibility="collapsed",
+    placeholder="Paste the full contract text here…",
+    height=260,
 )
 
 contract_text: str | None = None
 source_name: str = "unknown"
+uploaded_text: str | None = None
 
-if input_mode == "Upload file":
-    st.markdown('<div class="section-label" style="margin-top:1.2rem;">Contract Document</div>', unsafe_allow_html=True)
-    uploaded = st.file_uploader(
-        label="contract_upload",
-        type=["pdf", "docx"],
-        label_visibility="collapsed",
-        help="PDF or DOCX, up to 50 MB",
+if uploaded is not None:
+    source_name = uploaded.name
+    safe_uploaded_name = html.escape(uploaded.name)
+
+    st.markdown(
+        f'<div class="section-label" style="margin-top:0.5rem;">'
+        f'File received&nbsp;&nbsp;<span style="color:#9A9690">{safe_uploaded_name}</span></div>',
+        unsafe_allow_html=True,
     )
 
-    if uploaded is not None:
+    with st.spinner("Extracting text…"):
+        try:
+            uploaded_text = extract_text_from_uploaded_file(uploaded)
+        except RuntimeError as err:
+            uploaded_text = None
+            st.error(str(err))
+
+    if uploaded_text and uploaded_text.strip():
+        contract_text = uploaded_text.strip()
         source_name = uploaded.name
-        file_bytes = uploaded.read()
-        ext = Path(uploaded.name).suffix.lower()
-        with st.spinner("Extracting text…"):
-            try:
-                if ext == ".pdf":
-                    contract_text = extract_text_from_pdf(file_bytes)
-                elif ext == ".docx":
-                    contract_text = extract_text_from_docx(file_bytes)
-                else:
-                    st.error(f"Unsupported file type: {ext}")
-            except RuntimeError as err:
-                st.error(str(err))
+        st.success(
+            f"Text extracted successfully from {uploaded.name} ({len(contract_text):,} characters)."
+        )
+    else:
+        st.error(
+            "We received the file, but could not extract readable contract text. "
+            "Please paste the contract text manually instead."
+        )
 
-        if contract_text and contract_text.strip():
-            st.markdown(
-                f'<div class="section-label" style="margin-top:0.5rem;">'
-                f'Extracted &nbsp;<span style="color:#6B9A6B">'
-                f'{len(contract_text):,} chars</span> from '
-                f'<span style="color:#9A9690">{source_name}</span></div>',
-                unsafe_allow_html=True,
-            )
-        elif contract_text is not None:
-            st.warning("The file appears to be empty or could not be read.")
-
-else:  # Paste text
-    st.markdown('<div class="section-label" style="margin-top:1.2rem;">Contract Text</div>', unsafe_allow_html=True)
-    pasted = st.text_area(
-        label="contract_text_input",
-        label_visibility="collapsed",
-        placeholder="Paste the full contract text here…",
-        height=260,
-    )
-    if pasted.strip():
-        contract_text = pasted
-        source_name = "pasted-text"
+# File takes priority when extraction succeeds. If no usable file text exists,
+# the paste area works exactly as before.
+if not contract_text and pasted.strip():
+    contract_text = pasted.strip()
+    source_name = "pasted-text"
 
 # ── Analyse button ────────────────────────────────────────────────────────────
 st.markdown("<br>", unsafe_allow_html=True)
@@ -463,11 +509,12 @@ if analyse_clicked and contract_text and contract_text.strip():
     if analysis_ok:
         import datetime
         ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        safe_source_name = html.escape(source_name)
 
         # Meta bar
         st.markdown(f"""
         <div class="meta-bar">
-            <div class="meta-item">Source&nbsp;&nbsp;<span class="meta-value">{source_name}</span></div>
+            <div class="meta-item">Source&nbsp;&nbsp;<span class="meta-value">{safe_source_name}</span></div>
             <div class="meta-item">Length&nbsp;&nbsp;<span class="meta-value">{len(contract_text):,} chars</span></div>
             <div class="meta-item">Analysed&nbsp;&nbsp;<span class="meta-value">{ts}</span></div>
         </div>
