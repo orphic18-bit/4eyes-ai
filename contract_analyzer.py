@@ -354,6 +354,30 @@ def run_trap_linter(contract_text: str) -> list[dict]:
                 "and grants a limited embedded-use license effective upon full payment."
             ),
         },
+        {
+            "patterns": [
+                r"\$\s?\d[\d,\.]*.{0,250}arbitrat",
+                r"arbitrat.{0,350}\$\s?\d[\d,\.]*",
+                r"\$\s?\d[\d,\.]*.{0,250}(dispute|mediation) fee",
+                r"(dispute|mediation).{0,250}fee.{0,150}\$\s?\d[\d,\.]*",
+                r"responsible for paying.{0,80}\$\s?\d[\d,\.]*",
+                r"fee.{0,100}\$\s?\d[\d,\.]*.{0,250}(dispute|arbitrat|claim)",
+            ],
+            "alert_type": "DISPUTE_COST_BARRIER",
+            "severity":   "CRITICAL",
+            "message": (
+                "A specific dollar fee is attached to disputes, mediation, or "
+                "arbitration. You MUST quote the EXACT dollar amount and do the "
+                "math for the user: if the fee approaches or exceeds typical "
+                "milestone or invoice values, disputing becomes economically "
+                "irrational — the other party can hold any amount below that "
+                "threshold hostage because fighting costs more than surrendering. "
+                "Flag in RED FLAGS as [CRITICAL] with the exact fee quoted. Pair "
+                "it with the dispute/escrow trigger clause in COMPOUND TRAPS. "
+                "For PLATFORM_TOS: convert this into an operational workaround "
+                "with a concrete number (e.g. keep milestones below the fee amount)."
+            ),
+        },
     ]
 
     for trap in trap_definitions:
@@ -450,6 +474,13 @@ def extract_high_priority_sections(contract_text: str, max_chars: int = 8000) ->
     Returns "" when nothing matches — the pipeline skips the block.
     """
     paragraphs = re.split(r"\n\s*\n", contract_text)
+    # Web-copied and PDF-extracted text often lacks blank lines between
+    # paragraphs. If splitting produced too few chunks, fall back to
+    # single-newline splitting so aggregation still works.
+    if len(paragraphs) < 5:
+        paragraphs = contract_text.split("\n")
+
+    currency_re = re.compile(r"\$\s?\d[\d,\.]*")
     scored = []
     for para in paragraphs:
         para_clean = para.strip()
@@ -457,6 +488,10 @@ def extract_high_priority_sections(contract_text: str, max_chars: int = 8000) ->
             continue
         para_lower = para_clean.lower()
         score = sum(1 for anchor in HIGH_PRIORITY_ANCHORS if anchor in para_lower)
+        # Dollar amounts near risk anchors are the highest-value signal —
+        # fee traps hide in appendices. Boost them to the top of the block.
+        if score >= 1 and currency_re.search(para_clean):
+            score += 3
         if score >= 1:
             scored.append((score, para_clean))
 
@@ -722,6 +757,15 @@ def validate_report(report: str, alerts: list[dict]) -> list[str]:
                     "VALIDATION WARNING: Pre-existing IP assignment detected but "
                     "no [DEALBREAKER] tag found in report. Permanent IP forfeiture "
                     "must be flagged at maximum severity."
+                )
+
+        elif atype == "DISPUTE_COST_BARRIER":
+            has_dollar = bool(re.search(r"\$\s?\d", report))
+            if not has_dollar:
+                failures.append(
+                    "VALIDATION WARNING: A specific dollar fee for disputes/arbitration "
+                    "was detected in the contract but NO dollar amount appears in the "
+                    "report. The exact fee must be quoted with the economic math shown."
                 )
 
         elif atype == "INVASIVE_AUDIT_RIGHTS":
