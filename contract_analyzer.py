@@ -367,15 +367,16 @@ def run_trap_linter(contract_text: str) -> list[dict]:
             "severity":   "CRITICAL",
             "message": (
                 "A specific dollar fee is attached to disputes, mediation, or "
-                "arbitration. You MUST quote the EXACT dollar amount and do the "
-                "math for the user: if the fee approaches or exceeds typical "
-                "milestone or invoice values, disputing becomes economically "
-                "irrational — the other party can hold any amount below that "
-                "threshold hostage because fighting costs more than surrendering. "
-                "Flag in RED FLAGS as [CRITICAL] with the exact fee quoted. Pair "
-                "it with the dispute/escrow trigger clause in COMPOUND TRAPS. "
-                "For PLATFORM_TOS: convert this into an operational workaround "
-                "with a concrete number (e.g. keep milestones below the fee amount)."
+                "arbitration. You MUST quote the EXACT dollar amount. If the fee "
+                "is split between parties, compute and use the PER-PARTY amount. "
+                "Then do the economic math for the user: any milestone or invoice "
+                "worth less than the per-party fee can be held hostage, because "
+                "fighting costs more than surrendering. Flag in RED FLAGS as "
+                "[CRITICAL] with the exact figures. Pair it with the dispute/escrow "
+                "trigger clause in COMPOUND TRAPS. For PLATFORM_TOS: the workaround "
+                "must be structural with computed numbers — e.g. cap individual "
+                "milestones below the per-party fee amount so a client can never "
+                "weaponize the fee to force surrender."
             ),
         },
     ]
