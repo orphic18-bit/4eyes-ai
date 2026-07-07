@@ -244,6 +244,116 @@ def run_trap_linter(contract_text: str) -> list[dict]:
                 "Flag in RED FLAGS as [CRITICAL]."
             ),
         },
+        {
+            "patterns": [
+                r"right of offset",
+                r"offset.{0,150}suspected breach",
+                r"withhold.{0,100}payment.{0,200}suspected",
+                r"withhold.{0,100}invoice.{0,250}any other agreement",
+                r"offset.{0,200}any other agreement",
+                r"withhold payment.{0,150}damages.{0,100}claims",
+            ],
+            "alert_type": "BROAD_OFFSET_RIGHT",
+            "severity":   "CRITICAL",
+            "message": (
+                "Contract allows withholding payment based on suspected breaches, "
+                "unproven claims, or disputes from unrelated agreements. This is a "
+                "payment hostage trap — the other party can legally freeze invoices "
+                "on mere suspicion. Flag in RED FLAGS as [CRITICAL]. Check for a "
+                "COMPOUND TRAP with acceptance or termination clauses."
+            ),
+        },
+        {
+            "patterns": [
+                r"sole.{0,20}subjective.{0,20}discretion",
+                r"sole discretion.{0,250}(accept|revision|modification|approv)",
+                r"final acceptance.{0,300}sole.{0,40}discretion",
+                r"(accept|payment).{0,250}deployed to.{0,80}production",
+                r"deployed to.{0,80}production.{0,250}(accept|final)",
+                r"no further revisions.{0,150}required",
+            ],
+            "alert_type": "SUBJECTIVE_ACCEPTANCE_TRAP",
+            "severity":   "CRITICAL",
+            "message": (
+                "Payment or acceptance depends on the other party's subjective "
+                "discretion or on deployment they control, with no objective criteria "
+                "or deadline. They control whether the signing party ever gets paid. "
+                "Flag in RED FLAGS as [CRITICAL]. Check for a COMPOUND TRAP with "
+                "termination and offset clauses — combined they can mean termination "
+                "before acceptance with no payment owed."
+            ),
+        },
+        {
+            "patterns": [
+                r"notwithstanding anything to the contrary",
+                r"notwithstanding.{0,100}section",
+                r"notwithstanding.{0,120}elsewhere in this agreement",
+            ],
+            "alert_type": "NOTWITHSTANDING_OVERRIDE",
+            "severity":   "CRITICAL",
+            "message": (
+                "Contract contains a 'notwithstanding' override — language that "
+                "silently cancels a protection granted elsewhere in the contract. "
+                "You MUST identify BOTH the clause being overridden and the override "
+                "itself, and quote them together. If a protection is being erased "
+                "(especially IP retention), escalate to [DEALBREAKER — REVERSE "
+                "PROTECTION]. This is a prime COMPOUND TRAP — report it in the "
+                "COMPOUND TRAPS section showing both sections side by side."
+            ),
+        },
+        {
+            "patterns": [
+                r"(audit|inspect).{0,250}personal devices",
+                r"audit.{0,200}computer systems",
+                r"inspect and audit.{0,250}(books|records)",
+                r"(audit|inspect).{0,150}books.{0,80}records.{0,150}(systems|devices)",
+            ],
+            "alert_type": "INVASIVE_AUDIT_RIGHTS",
+            "severity":   "CRITICAL",
+            "message": (
+                "Contract grants audit or inspection rights over personal devices, "
+                "computer systems, or broad books and records. This exposes personal "
+                "data and other clients' confidential information. Flag in RED FLAGS "
+                "as [CRITICAL] — not merely as an unfavorable clause."
+            ),
+        },
+        {
+            "patterns": [
+                r"highest industry standards",
+                r"best industry standards",
+                r"highest professional standards",
+                r"state.{0,5}of.{0,5}the.{0,5}art.{0,100}standard",
+                r"satisfactory to (the )?company",
+            ],
+            "alert_type": "ELEVATED_PERFORMANCE_STANDARD",
+            "severity":   "NEGOTIATE",
+            "message": (
+                "Contract imposes a vague elevated performance standard ('highest "
+                "industry standards' or similar). This creates an undefined, "
+                "escalated breach standard that can be weaponized. Flag in "
+                "UNFAVORABLE CLAUSES as [NEGOTIATE] — suggest replacing with "
+                "'commercially reasonable professional standards'. Escalate to "
+                "[CRITICAL] only if tied to payment or acceptance conditions."
+            ),
+        },
+        {
+            "patterns": [
+                r"assigns and transfers all ownership.{0,250}pre.{0,5}existing",
+                r"pre.{0,5}existing.{0,120}(ip|intellectual property).{0,250}assign",
+                r"assign.{0,250}pre.{0,5}existing (ip|intellectual property)",
+                r"incorporat.{0,250}pre.{0,5}existing.{0,350}(assign|transfer|ownership)",
+            ],
+            "alert_type": "PRE_EXISTING_IP_FORFEITURE",
+            "severity":   "DEALBREAKER",
+            "message": (
+                "Contract assigns or transfers ownership of the signing party's "
+                "PRE-EXISTING IP — their background tools, libraries, or frameworks. "
+                "This is permanent IP forfeiture, not a mere perpetual obligation. "
+                "Flag in RED FLAGS as [DEALBREAKER — REVERSE PROTECTION]. The fix is "
+                "always license, never assignment — signing party retains ownership "
+                "and grants a limited embedded-use license effective upon full payment."
+            ),
+        },
     ]
 
     for trap in trap_definitions:
@@ -267,6 +377,106 @@ def run_trap_linter(contract_text: str) -> list[dict]:
         print("✅  Trap linter: no known traps detected")
 
     return alerts
+
+
+# ────────────────────────────────────────────────────────────
+# 4.5  Document classifier gate — cheap pre-pass
+# ────────────────────────────────────────────────────────────
+def classify_document_type(contract_text: str, client: OpenAI) -> str:
+    """
+    Cheap classification pass (gpt-4o-mini, ~10 tokens output).
+    Returns one of: PEER_CONTRACT / PLATFORM_TOS / OTHER.
+
+    PEER_CONTRACT — negotiable two-party agreement (NDA, SOW, MSA,
+    freelance/consulting agreement).
+    PLATFORM_TOS — non-negotiable platform or marketplace terms
+    (Upwork, Fiverr, Stripe, PayPal, app-store terms, escrow
+    instructions issued by a platform).
+    OTHER — unclear.
+
+    Fails safe to OTHER on any error so analysis always proceeds.
+    """
+    classifier_system = (
+        "You are a document classifier. Classify the document into exactly one label:\n"
+        "PEER_CONTRACT — a negotiable agreement between two specific parties "
+        "(NDA, SOW, MSA, freelance agreement, consulting agreement, service agreement).\n"
+        "PLATFORM_TOS — non-negotiable terms published by a platform or marketplace "
+        "to all its users (terms of service, user agreements, escrow instructions, "
+        "seller/contractor policies from platforms like Upwork, Fiverr, Stripe, PayPal).\n"
+        "OTHER — anything unclear or neither of the above.\n"
+        "Respond with ONLY the label. Nothing else."
+    )
+    try:
+        response = client.chat.completions.create(
+            model=MODEL_EXTRACTION,
+            temperature=0,
+            max_tokens=10,
+            messages=[
+                {"role": "system", "content": classifier_system},
+                {"role": "user",   "content": contract_text[:6000]},
+            ],
+        )
+        label = (response.choices[0].message.content or "").strip().upper()
+        if label in ("PEER_CONTRACT", "PLATFORM_TOS", "OTHER"):
+            print(f"🗂️  Document type: {label}")
+            return label
+        return "OTHER"
+    except Exception as e:
+        print(f"⚠️  Classifier failed ({e}) — defaulting to OTHER")
+        return "OTHER"
+
+
+# ────────────────────────────────────────────────────────────
+# 4.6  High-priority section aggregation — cross-section fix
+# ────────────────────────────────────────────────────────────
+HIGH_PRIORITY_ANCHORS = [
+    "arbitration", "dispute", "fee", "penalty", "appendix",
+    "schedule", "exhibit", "withhold", "suspend", "terminate",
+    "offset", "escrow", "milestone", "acceptance",
+    "notwithstanding", "indemnif",
+]
+
+
+def extract_high_priority_sections(contract_text: str, max_chars: int = 8000) -> str:
+    """
+    Scans the contract for paragraphs containing high-risk anchor
+    words and pulls them into one block. This forces the analysis
+    model to see triggers (e.g. Section 7 dispute clause) and their
+    consequences (e.g. Appendix A arbitration fee) side by side —
+    fixing cross-section blindness in long documents.
+
+    Paragraphs with MORE anchor matches rank first. Output capped
+    at max_chars so the block never swallows the whole document.
+    Returns "" when nothing matches — the pipeline skips the block.
+    """
+    paragraphs = re.split(r"\n\s*\n", contract_text)
+    scored = []
+    for para in paragraphs:
+        para_clean = para.strip()
+        if len(para_clean) < 40:  # skip headers / fragments
+            continue
+        para_lower = para_clean.lower()
+        score = sum(1 for anchor in HIGH_PRIORITY_ANCHORS if anchor in para_lower)
+        if score >= 1:
+            scored.append((score, para_clean))
+
+    if not scored:
+        return ""
+
+    # Highest-scoring paragraphs first — they combine multiple risk anchors
+    scored.sort(key=lambda item: item[0], reverse=True)
+
+    block: list[str] = []
+    total = 0
+    for score, para in scored:
+        if total + len(para) > max_chars:
+            break
+        block.append(para)
+        total += len(para)
+
+    if block:
+        print(f"🔎  High-priority aggregation: {len(block)} section(s) extracted")
+    return "\n\n".join(block)
 
 
 # ────────────────────────────────────────────────────────────
@@ -340,9 +550,14 @@ def format_linter_alerts(alerts: list[dict]) -> str:
         "═══════════════════════════════════════════",
         "SYSTEM PRE-SCAN ALERTS — MUST BE ADDRESSED",
         "═══════════════════════════════════════════",
-        "The following dangerous patterns were detected by automated scan.",
-        "EVERY alert below MUST appear in RED FLAGS unless you can explicitly",
-        "show the clause is mitigated elsewhere in the contract.",
+        "The following patterns were detected by automated scan.",
+        "EVERY alert below MUST be explicitly addressed in the report:",
+        "- If valid: place it in the section matching its severity",
+        "  (DEALBREAKER/CRITICAL → RED FLAGS, NEGOTIATE → UNFAVORABLE CLAUSES).",
+        "- If mitigated elsewhere in the contract: explain the mitigation",
+        "  and downgrade accordingly.",
+        "- If a false positive: state why briefly.",
+        "Silently ignoring an alert is not permitted.",
         "",
     ]
     for i, alert in enumerate(alerts, 1):
@@ -363,15 +578,38 @@ def run_analysis_pass(
     linter_alerts: str,
     system_prompt: str,
     client:        OpenAI,
+    doc_type:      str = "OTHER",
+    high_priority: str = "",
 ) -> str:
     """
     Pass 2 (strong model): full risk analysis using:
+    - Document type from classifier gate
+    - High-priority aggregated sections (cross-section trap fix)
     - Linter alerts (known traps detected)
     - Extraction output (plain-English clause effects)
     - Original contract text
     """
+    high_priority_block = ""
+    if high_priority:
+        high_priority_block = f"""\
+<high_priority_sections>
+The following sections contain high-risk anchor terms (fees, 
+disputes, termination, offsets, appendices, notwithstanding 
+overrides). They are extracted and grouped so trigger clauses 
+and their consequences sit side by side. Cross-reference these 
+against each other for COMPOUND TRAPS before reading the full 
+contract — a fee in an appendix can weaponize a dispute clause 
+in the main body.
+
+{high_priority}
+</high_priority_sections>
+────────────────────────────────────────────────────────
+"""
+
     user_message = f"""\
-{linter_alerts}
+DOCUMENT_TYPE: {doc_type}
+────────────────────────────────────────────────────────
+{high_priority_block}{linter_alerts}
 ────────────────────────────────────────────────────────
 CLAUSE EFFECT TRANSLATION
 The following is a plain-English translation of every clause's 
@@ -455,6 +693,44 @@ def validate_report(report: str, alerts: list[dict]) -> list[str]:
                     "may not be tagged [CRITICAL]."
                 )
 
+        elif atype == "BROAD_OFFSET_RIGHT":
+            if "offset" not in report_lower and "withhold" not in report_lower:
+                failures.append(
+                    "VALIDATION WARNING: Broad offset/withholding right detected "
+                    "by pre-scan but not addressed in the report. The other party "
+                    "may be able to freeze payment on suspicion alone."
+                )
+
+        elif atype == "SUBJECTIVE_ACCEPTANCE_TRAP":
+            if "acceptance" not in report_lower and "discretion" not in report_lower:
+                failures.append(
+                    "VALIDATION WARNING: Subjective acceptance/payment trap detected "
+                    "by pre-scan but not addressed in the report."
+                )
+
+        elif atype == "NOTWITHSTANDING_OVERRIDE":
+            if "notwithstanding" not in report_lower:
+                failures.append(
+                    "VALIDATION WARNING: 'Notwithstanding' override detected by "
+                    "pre-scan but not addressed in the report. A protection granted "
+                    "in one section may be silently cancelled by another."
+                )
+
+        elif atype == "PRE_EXISTING_IP_FORFEITURE":
+            if "dealbreaker" not in report_lower:
+                failures.append(
+                    "VALIDATION WARNING: Pre-existing IP assignment detected but "
+                    "no [DEALBREAKER] tag found in report. Permanent IP forfeiture "
+                    "must be flagged at maximum severity."
+                )
+
+        elif atype == "INVASIVE_AUDIT_RIGHTS":
+            if "audit" in report_lower and "critical" not in report_lower:
+                failures.append(
+                    "VALIDATION WARNING: Invasive audit rights detected but may "
+                    "not be tagged [CRITICAL]."
+                )
+
     return failures
 
 
@@ -490,15 +766,19 @@ def analyze(contract_text: str) -> str:
     client = OpenAI(api_key=api_key)
 
     # ── Pipeline ─────────────────────────────────────────────
-    alerts     = run_trap_linter(contract_text)
-    extraction = run_extraction_pass(contract_text, client)
-    linter_text = format_linter_alerts(alerts)
+    doc_type      = classify_document_type(contract_text, client)
+    high_priority = extract_high_priority_sections(contract_text)
+    alerts        = run_trap_linter(contract_text)
+    extraction    = run_extraction_pass(contract_text, client)
+    linter_text   = format_linter_alerts(alerts)
     report = run_analysis_pass(
         contract_text,
         extraction,
         linter_text,
         system_prompt,
         client,
+        doc_type=doc_type,
+        high_priority=high_priority,
     )
 
     # ── Validate & append any warnings ───────────────────────
@@ -567,6 +847,23 @@ def looks_like_a_contract(text: str):
             f"Input is too short ({word_count} words). "
             f"A contract typically has at least {MIN_WORD_COUNT} words."
         )
+
+    # Reject documents that are ABOUT contracts rather than contracts:
+    # analysis reports, summaries, reviews (including 4eyes' own output).
+    report_markers = [
+        "contract analysis report", "risk score", "red flags",
+        "negotiation suggestions", "verdict & risk summary",
+        "analysis basis", "missing protections", "contract tilt",
+        "top 3 priority issues",
+    ]
+    marker_hits = sum(1 for m in report_markers if m in text.lower())
+    if marker_hits >= 3:
+        return False, (
+            "This looks like a contract analysis report or summary — "
+            "not an actual contract. Please paste the original contract "
+            "text you want reviewed."
+        )
+
     signals = [
         "agreement", "party", "shall", "obligations", "terms",
         "conditions", "signature", "effective date", "clause",
@@ -637,21 +934,29 @@ def main():
     client = OpenAI(api_key=api_key)
 
     # ── Pipeline ─────────────────────────────────────────────
-    print("\n🔍  Step 1/3 — Running trap linter (free, instant)...")
+    print("\n🗂️   Step 1/5 — Classifying document type (gpt-4o-mini)...")
+    doc_type = classify_document_type(contract_text, client)
+
+    print("🔎  Step 2/5 — Aggregating high-priority sections...")
+    high_priority = extract_high_priority_sections(contract_text)
+
+    print("🔍  Step 3/5 — Running trap linter (free, instant)...")
     alerts = run_trap_linter(contract_text)
 
-    print("⚙️   Step 2/3 — Running extraction pass (gpt-4o-mini)...")
+    print("⚙️   Step 4/5 — Running extraction pass (gpt-4o-mini)...")
     extraction = run_extraction_pass(contract_text, client)
 
     linter_text = format_linter_alerts(alerts)
 
-    print("🧠  Step 3/3 — Running analysis pass (gpt-4o)...")
+    print("🧠  Step 5/5 — Running analysis pass (gpt-4o)...")
     report = run_analysis_pass(
         contract_text,
         extraction,
         linter_text,
         system_prompt,
         client,
+        doc_type=doc_type,
+        high_priority=high_priority,
     )
 
     # ── Validate ─────────────────────────────────────────────

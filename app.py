@@ -1,5 +1,5 @@
 """
-4eyes.ai — Phase 4: Streamlit Frontend
+4eyes.ai — Streamlit Frontend
 Contract Intelligence Platform
 """
 
@@ -283,7 +283,7 @@ st.markdown("""
 <div class="brand-header">
     <span class="brand-name">4eyes</span><span class="brand-dot">.</span><span class="brand-name">ai</span>
 </div>
-<div class="brand-tagline">Contract Intelligence Platform &nbsp;·&nbsp; Phase 4</div>
+<div class="brand-tagline">Plain-English Contract Audits &nbsp;·&nbsp; Built for Freelancers &amp; Solo Founders</div>
 """, unsafe_allow_html=True)
 
 st.markdown('<hr class="hairline">', unsafe_allow_html=True)
@@ -426,6 +426,34 @@ def run_analysis(contract_text: str) -> str:
     return str(result)
 
 
+# ── Sample contract for zero-friction testing ────────────────────────────────
+SAMPLE_CONTRACT = """INDEPENDENT CONTRACTOR SERVICES AGREEMENT
+
+This Independent Contractor Services Agreement ("Agreement") is entered into as of June 15, 2026, by and between Nexus Global Cloud Solutions, Inc., a Delaware corporation ("Company" or "Nexus"), and The Undersigned ("Contractor").
+
+1. Services and Deliverables. Contractor agrees to perform the software development and consulting services ("Services") and provide the deliverables ("Deliverables") as mutually agreed upon in writing by the parties. Contractor shall perform the Services in a professional and workmanlike manner, in accordance with highest industry standards.
+
+2. Compensation and Payment Terms. Company shall pay Contractor the agreed-upon fees for the Services. Contractor shall submit invoices monthly. Company agrees to pay all undisputed invoices within Net-60 days of receipt, subject to Company's Final Acceptance of the Deliverables. "Final Acceptance" shall mean the Deliverables have been deployed to Company's production environment and Company has confirmed, in its sole subjective discretion, that no further revisions, bug fixes, or modifications are required. Company reserves the right of offset, and may withhold payment of any invoice to offset any damages, claims, or suspected breaches of this Agreement or any other agreement between Company and Contractor.
+
+3. Intellectual Property and Pre-Existing Rights. The parties agree that Contractor is an independent entity. Contractor shall retain all right, title, and interest in and to any pre-existing code, libraries, frameworks, or tools that Contractor developed prior to this Agreement ("Pre-Existing IP"). All new work product created specifically for the Company under this Agreement shall be considered a "work made for hire" and shall be the sole property of the Company.
+
+4. Term and Termination. This Agreement shall commence on the date first written above and continue until the Services are completed. Company may terminate this Agreement at any time, for any reason or no reason, immediately upon written notice to Contractor. Contractor may only terminate this Agreement in the event of a material breach by Company, provided that Contractor gives Company thirty (30) days prior written notice specifying the breach, and Company fails to cure such breach within the thirty (30) day period.
+
+5. Representations and Warranties. Contractor represents and warrants that the Services and Deliverables will not infringe upon the intellectual property rights of any third party. Contractor agrees to defend, indemnify, and hold Company harmless from any claims, damages, or expenses arising from a breach of this warranty.
+
+6. Audit Rights. During the term of this Agreement and for a period of two (2) years thereafter, Company or its designated representatives shall have the right, upon three (3) business days' notice, to inspect and audit Contractor's books, records, computer systems, and personal devices used in connection with the Services, to ensure compliance with the terms of this Agreement and the security of Company data.
+
+7. Miscellaneous and General Provisions. This Agreement constitutes the entire understanding between the parties. If any provision is found to be unenforceable, the remaining provisions shall survive. Notwithstanding anything to the contrary in Section 3 or elsewhere in this Agreement, if Contractor incorporates any Pre-Existing IP into the Deliverables, Contractor hereby assigns and transfers all ownership rights, titles, and interests in that specific Pre-Existing IP to the Company globally and in perpetuity.
+
+IN WITNESS WHEREOF, the parties have executed this Agreement.
+Nexus Global Cloud Solutions, Inc. By: ______________________ Title: Director of Vendor Relations
+Contractor: By: ______________________ Title: Independent Contractor"""
+
+
+def _load_sample_contract() -> None:
+    st.session_state["contract_text_input"] = SAMPLE_CONTRACT
+
+
 # ── Input section ─────────────────────────────────────────────────────────────
 st.markdown('<div class="section-label">UPLOAD CONTRACT (PDF, DOCX, or TXT)</div>', unsafe_allow_html=True)
 
@@ -436,12 +464,43 @@ uploaded = st.file_uploader(
     help="PDF, DOCX, or TXT, up to 50 MB",
 )
 
-st.markdown('<div class="section-label" style="margin-top:1.2rem;">Contract Text</div>', unsafe_allow_html=True)
-pasted = st.text_area(
-    label="contract_text_input",
-    label_visibility="collapsed",
-    placeholder="Paste the full contract text here…",
-    height=260,
+# Privacy reassurance — directly below the upload zone
+st.markdown(
+    '<div style="font-family:\'DM Mono\',monospace; font-size:0.68rem; '
+    'color:#6B6860; margin-top:0.5rem;">'
+    '🔒 Contracts are processed in memory — never stored, sold, or used to train AI models.'
+    '</div>',
+    unsafe_allow_html=True,
+)
+
+# Paste input — secondary path, expands automatically when sample is loaded
+paste_expanded = bool(st.session_state.get("contract_text_input", "").strip())
+with st.expander("Or paste contract text instead", expanded=paste_expanded):
+    pasted = st.text_area(
+        label="contract_text_input",
+        label_visibility="collapsed",
+        placeholder="Paste the full contract text here…",
+        height=260,
+        key="contract_text_input",
+    )
+
+# Zero-friction demo — populates the paste area with a predatory sample
+st.button(
+    "🧪 No contract handy? Try a sample predatory contract",
+    on_click=_load_sample_contract,
+    help="Loads a mock contractor agreement full of real-world traps so you can see the engine work.",
+)
+
+# Report structure preview — sets output expectation before first run
+st.markdown(
+    '<div style="font-family:\'DM Mono\',monospace; font-size:0.68rem; '
+    'color:#6B6860; letter-spacing:0.04em; margin-top:1rem; line-height:1.8;">'
+    'YOUR REPORT WILL INCLUDE &nbsp;→&nbsp; Contract Type &nbsp;·&nbsp; Risk Score '
+    '&nbsp;·&nbsp; Top 3 Priority Issues &nbsp;·&nbsp; Red Flags with exact quotes '
+    '&nbsp;·&nbsp; Compound Traps &nbsp;·&nbsp; Missing Protections '
+    '&nbsp;·&nbsp; Negotiation Scripts &nbsp;·&nbsp; Sign / Negotiate / Avoid Verdict'
+    '</div>',
+    unsafe_allow_html=True,
 )
 
 contract_text: str | None = None
@@ -561,6 +620,6 @@ elif analyse_clicked:
 st.markdown("""
 <hr class="hairline" style="margin-top:4rem;">
 <div style="font-family:'DM Mono',monospace; font-size:0.65rem; color:#3A3A45; text-align:center; padding-bottom:1rem;">
-    4eyes.ai &nbsp;·&nbsp; Contract Intelligence &nbsp;·&nbsp; Phase 4
+    4eyes.ai &nbsp;·&nbsp; Contract Intelligence &nbsp;·&nbsp; Beta
 </div>
 """, unsafe_allow_html=True)
